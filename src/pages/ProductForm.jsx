@@ -1,17 +1,200 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import axios from '../api/axios';
 
 const ProductForm = () => {
   const { id } = useParams();
   const isEdit = !!id;
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    name: '',
+    sku: '',
+    description: '',
+    quantity: 0,
+    costPrice: 0,
+    sellingPrice: 0,
+    lowStockThreshold: 5,
+  });
+
+  const [loading, setLoading] = useState(isEdit);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isEdit) {
+      const fetchProduct = async () => {
+        try {
+          // As per request: "pre-fill form by GET /products and find by id"
+          // Usually, we'd use GET /products/:id, but following instructions
+          const response = await axios.get('/products');
+          const product = response.data.find(p => p.id.toString() === id);
+          
+          if (product) {
+            setFormData({
+              name: product.name || '',
+              sku: product.sku || '',
+              description: product.description || '',
+              quantity: product.quantity || 0,
+              costPrice: product.costPrice || 0,
+              sellingPrice: product.sellingPrice || 0,
+              lowStockThreshold: product.lowStockThreshold || 5,
+            });
+          } else {
+            setError('Product not found.');
+          }
+        } catch (err) {
+          console.error('Error fetching product:', err);
+          setError('Failed to load product data.');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchProduct();
+    }
+  }, [id, isEdit]);
+
+  const handleChange = (e) => {
+    const { id, value, type } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: type === 'number' ? parseFloat(value) : value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+
+    try {
+      if (isEdit) {
+        await axios.put(`/products/${id}`, formData);
+      } else {
+        await axios.post('/products', formData);
+      }
+      navigate('/products');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save product. Please check your input.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <div className="container"><div className="loading-container">Loading product details...</div></div>;
 
   return (
     <div className="container">
-      <div className="page-header">
-        <h1 className="page-title">{isEdit ? 'Edit Product' : 'Add New Product'}</h1>
-      </div>
-      <div style={{ background: 'white', padding: '2rem', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-sm)' }}>
-        <p>{isEdit ? `Editing product ID: ${id}` : 'Create a new product entry.'}</p>
+      <div className="form-card" style={{ maxWidth: '600px' }}>
+        <h1 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+          {isEdit ? 'Edit Product' : 'Add New Product'}
+        </h1>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="name">Product Name *</label>
+            <input
+              id="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="e.g. Wireless Mouse"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="sku">SKU *</label>
+            <input
+              id="sku"
+              type="text"
+              value={formData.sku}
+              onChange={handleChange}
+              placeholder="e.g. WM-100-BLK"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              id="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Describe the product..."
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label htmlFor="quantity">Quantity on Hand</label>
+              <input
+                id="quantity"
+                type="number"
+                min="0"
+                value={formData.quantity}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="lowStockThreshold">Low Stock Threshold</label>
+              <input
+                id="lowStockThreshold"
+                type="number"
+                min="0"
+                value={formData.lowStockThreshold}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label htmlFor="costPrice">Cost Price ($)</label>
+              <input
+                id="costPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.costPrice}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sellingPrice">Selling Price ($)</label>
+              <input
+                id="sellingPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.sellingPrice}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {error && <p className="error-message" style={{ marginBottom: '1.5rem' }}>{error}</p>}
+
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+            <button 
+              type="button" 
+              className="btn-secondary" 
+              onClick={() => navigate('/products')}
+              style={{ flex: 1 }}
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="btn-primary" 
+              disabled={submitting}
+              style={{ flex: 2 }}
+            >
+              {submitting ? 'Saving...' : (isEdit ? 'Update Product' : 'Create Product')}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

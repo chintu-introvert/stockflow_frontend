@@ -34,7 +34,7 @@ const LowStockTable = ({ items }) => {
                       padding: '0.25rem 0.5rem',
                       borderRadius: '4px'
                     }}>
-                      {item.quantity}
+                      {item.quantityOnHand}
                     </span>
                   </td>
                   <td style={{ padding: '1rem', fontSize: '0.9375rem', color: 'var(--text-secondary)' }}>{item.lowStockThreshold}</td>

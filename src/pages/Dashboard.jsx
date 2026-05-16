@@ -64,11 +64,11 @@ const Dashboard = () => {
           <div className="stat-value">{stats.totalQuantity}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label" style={{ color: stats.lowStockCount > 0 ? 'var(--error-color)' : 'var(--text-secondary)' }}>
+          <div className="stat-label" style={{ color: stats.lowStockItems.length > 0 ? 'var(--error-color)' : 'var(--text-secondary)' }}>
             Low Stock Items
           </div>
-          <div className="stat-value" style={{ color: stats.lowStockCount > 0 ? 'var(--error-color)' : 'var(--text-primary)' }}>
-            {stats.lowStockCount}
+          <div className="stat-value" style={{ color: stats.lowStockItems.length > 0 ? 'var(--error-color)' : 'var(--text-primary)' }}>
+            {stats.lowStockItems.length}
           </div>
         </div>
       </div>

@@ -11,48 +11,58 @@ const ProductForm = () => {
     name: '',
     sku: '',
     description: '',
-    quantity: 0,
+    quantityOnHand: 0,
     costPrice: 0,
     sellingPrice: 0,
     lowStockThreshold: 5,
   });
 
-  const [loading, setLoading] = useState(isEdit);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isEdit) {
-      const fetchProduct = async () => {
-        try {
-          // As per request: "pre-fill form by GET /products and find by id"
-          // Usually, we'd use GET /products/:id, but following instructions
-          const response = await axios.get('/products');
-          const product = response.data.find(p => p.id.toString() === id);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const settingsRes = await axios.get('/settings');
+        const defaultThreshold = settingsRes.data.defaultLowStockThreshold ?? settingsRes.data;
+        
+        if (isEdit) {
+          const productsRes = await axios.get('/products');
+          const product = productsRes.data.find(p => p.id.toString() === id);
           
           if (product) {
             setFormData({
               name: product.name || '',
               sku: product.sku || '',
               description: product.description || '',
-              quantity: product.quantity || 0,
-              costPrice: product.costPrice || 0,
-              sellingPrice: product.sellingPrice || 0,
-              lowStockThreshold: product.lowStockThreshold || 5,
+              quantityOnHand: Number(product.quantityOnHand || 0),
+              costPrice: Number(product.costPrice || 0),
+              sellingPrice: Number(product.sellingPrice || 0),
+              lowStockThreshold: Number(product.lowStockThreshold ?? defaultThreshold ?? 5),
             });
           } else {
             setError('Product not found.');
           }
-        } catch (err) {
-          console.error('Error fetching product:', err);
-          setError('Failed to load product data.');
-        } finally {
-          setLoading(false);
+        } else {
+          // New product path
+          if (defaultThreshold !== undefined) {
+            setFormData(prev => ({
+              ...prev,
+              lowStockThreshold: Number(defaultThreshold)
+            }));
+          }
         }
-      };
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        if (isEdit) setError('Failed to load product data.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchProduct();
-    }
+    fetchData();
   }, [id, isEdit]);
 
   const handleChange = (e) => {
@@ -128,12 +138,12 @@ const ProductForm = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="form-group">
-              <label htmlFor="quantity">Quantity on Hand</label>
+              <label htmlFor="quantityOnHand">Quantity on Hand</label>
               <input
-                id="quantity"
+                id="quantityOnHand"
                 type="number"
                 min="0"
-                value={formData.quantity}
+                value={formData.quantityOnHand}
                 onChange={handleChange}
               />
             </div>

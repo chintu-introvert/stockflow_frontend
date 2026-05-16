@@ -7,15 +7,24 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [settings, setSettings] = useState({ defaultLowStockThreshold: 5 });
   const navigate = useNavigate();
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('/products');
-      setProducts(response.data);
+      const [productsRes, settingsRes] = await Promise.all([
+        axios.get('/products'),
+        axios.get('/settings')
+      ]);
+      setProducts(productsRes.data);
+      
+      const threshold = settingsRes.data.defaultLowStockThreshold ?? settingsRes.data;
+      if (threshold !== undefined) {
+        setSettings({ defaultLowStockThreshold: Number(threshold) });
+      }
     } catch (err) {
-      console.error('Error fetching products:', err);
-      setError('Failed to load products.');
+      console.error('Error fetching data:', err);
+      setError('Failed to load data.');
     } finally {
       setLoading(false);
     }
@@ -42,8 +51,8 @@ const Products = () => {
   );
 
   const isLowStock = (product) => {
-    const threshold = product.lowStockThreshold ?? 5;
-    return product.quantity <= threshold;
+    const threshold = product.lowStockThreshold ?? settings.defaultLowStockThreshold;
+    return product.quantityOnHand <= threshold;
   };
 
   if (loading) return <div className="container"><div className="loading-container">Loading products...</div></div>;
@@ -87,7 +96,7 @@ const Products = () => {
                 <tr key={product.id}>
                   <td style={{ fontWeight: '600' }}>{product.name}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>{product.sku}</td>
-                  <td>{product.quantity}</td>
+                  <td>{product.quantityOnHand}</td>
                   <td>
                     {isLowStock(product) ? (
                       <span className="badge badge-danger">Low Stock</span>
@@ -95,7 +104,7 @@ const Products = () => {
                       <span className="badge badge-success">In Stock</span>
                     )}
                   </td>
-                  <td style={{ fontWeight: '600' }}>${product.sellingPrice?.toFixed(2)}</td>
+                  <td style={{ fontWeight: '600' }}>${Number(product.sellingPrice || 0).toFixed(2)}</td>
                   <td>
                     <div className="action-btns" style={{ justifyContent: 'flex-end' }}>
                       <button 
